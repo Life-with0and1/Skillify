@@ -492,7 +492,7 @@ const NotificationDropdown: React.FC = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // Navigate to messages (implement later)
-                                toast.info("Messaging feature coming soon!");
+                                toast("Messaging feature coming soon!");
                               }}
                               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                             >
