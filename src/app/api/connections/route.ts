@@ -1,9 +1,105 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import dbConnect from "@/lib/mongodb";
-import User from "@/models/User";
+import User, { IUser } from "@/models/User";
 import Notification from "@/models/Notification";
 import { StreamChat } from "stream-chat";
+import { Types } from "mongoose";
+
+// Stream Chat types are now extended in src/types/stream-chat.d.ts
+
+// Extend the global Express namespace to include our custom types
+declare global {
+  namespace Express {
+    interface User {
+      _id: Types.ObjectId;
+      clerkId: string;
+      fullName: string;
+      avatar?: string;
+      connections: Types.ObjectId[];
+      connectionRequests: Types.ObjectId[];
+      
+      // Connection methods
+      getConnectionStatus(userId: string | Types.ObjectId): 'connected' | 'request_sent' | 'request_received' | 'not_connected';
+      sendConnectionRequest(userId: string | Types.ObjectId): Promise<IUser>;
+      receiveConnectionRequest(userId: string | Types.ObjectId): Promise<IUser>;
+      acceptConnectionRequest(userId: string | Types.ObjectId): Promise<IUser>;
+      withdrawConnectionRequest(userId: string | Types.ObjectId): Promise<IUser>;
+      save(): Promise<IUser>;
+    }
+  }
+}
+
+type StreamUser = {
+  id: string;
+  name?: string;
+  image?: string;
+};
+
+interface CustomMessageData {
+  text: string;
+  type: 'system' | 'regular' | 'ephemeral' | 'error' | 'reply' | 'deleted' | 'system/connection_request' | 'system/connection_accepted';
+  fromClerkId: string;
+  profileUrl: string;
+  notifType: string;
+  custom: {
+    notifType: string;
+    fromClerkId?: string;
+    fromFullName?: string;
+    profileUrl?: string;
+  };
+}
+
+type CustomChannelData = {
+  members: string[];
+};
+
+// Extended types for Stream Chat
+
+// Type for Stream Chat message data
+type StreamMessageData = {
+  text: string;
+  type: 'system' | 'error' | 'regular' | 'ephemeral' | 'reply' | 'deleted';
+  user: {
+    id: string;
+    name?: string;
+    image?: string;
+  };
+  id?: string;
+  name?: string;
+  image?: string;
+  custom?: {
+    notifType: string;
+    fromClerkId?: string;
+    fromFullName?: string;
+    profileUrl?: string;
+    [key: string]: any;
+  };
+  notifType?: string;
+  fromClerkId?: string;
+  fromFullName?: string;
+  profileUrl?: string;
+  [key: string]: any;
+};
+
+// Helper function to safely send user events
+async function sendUserEvent(
+  serverClient: any,
+  event: {
+    type: string;
+    notifType: string;
+    fromClerkId: string;
+    fromFullName: string;
+    profileUrl: string;
+  },
+  userIds: string[]
+) {
+  if (serverClient.sendUserEvent) {
+    return serverClient.sendUserEvent(event, userIds);
+  }
+  console.warn('sendUserEvent method not available on serverClient');
+  return Promise.resolve();
+}
 
 // Send connection request
 export async function POST(request: NextRequest) {
@@ -43,9 +139,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert to MongoDB ObjectId for connection operations
-    const targetUserObjectId = targetUser._id ? targetUser._id.toString() : null;
+    const targetUserObjectId = targetUser._id ? (targetUser._id as Types.ObjectId).toString() : null;
+    const currentUserId = currentUser._id?.toString();
     
-    if (!targetUserObjectId) {
+    if (!targetUserObjectId || !currentUserId) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
@@ -68,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     // Send connection request - use MongoDB ObjectIds
     await currentUser.sendConnectionRequest(targetUserObjectId);
-    await targetUser.receiveConnectionRequest(currentUser._id.toString());
+    await targetUser.receiveConnectionRequest(currentUserId);
 
     // Create notification for target user - use MongoDB ObjectId for recipient
     try {
@@ -77,9 +174,9 @@ export async function POST(request: NextRequest) {
         "connection_request",
         "New Connection Request",
         `${currentUser.fullName} wants to connect with you`,
-        currentUser._id.toString(),
+        currentUserId,
         {
-          connectionRequestId: currentUser._id.toString(),
+          connectionRequestId: currentUserId,
           profileUrl: `/profile/${currentUser.clerkId}`,
         }
       );
@@ -92,23 +189,34 @@ export async function POST(request: NextRequest) {
     try {
       const API_KEY = process.env.STREAM_KEY;
       const API_SECRET = process.env.STREAM_SECRET;
-      if (API_KEY && API_SECRET) {
+      
+      if (API_KEY && API_SECRET && currentUser.clerkId && targetUser.clerkId) {
         const serverClient = StreamChat.getInstance(API_KEY, API_SECRET);
+        
+        // Update user information in Stream
         await serverClient.upsertUsers([
-          { id: currentUser.clerkId, name: currentUser.fullName, image: currentUser.avatar || undefined },
-          { id: targetUser.clerkId, name: targetUser.fullName, image: targetUser.avatar || undefined },
+          { 
+            id: currentUser.clerkId, 
+            name: currentUser.fullName || 'User', 
+            image: currentUser.avatar || undefined 
+          },
+          { 
+            id: targetUser.clerkId, 
+            name: targetUser.fullName || 'User', 
+            image: targetUser.avatar || undefined 
+          },
         ]);
+
         // User-level event
-        await serverClient.sendUserEvent(
-          {
-            type: "user.notification",
-            notifType: "connection_request",
-            fromClerkId: currentUser.clerkId,
-            fromFullName: currentUser.fullName,
-            profileUrl: `/profile/${currentUser.clerkId}`,
-          } as any,
-          [targetUser.clerkId]
-        );
+        const userEvent = {
+          type: "user.notification",
+          notifType: "connection_request",
+          fromClerkId: currentUser.clerkId,
+          fromFullName: currentUser.fullName || 'User',
+          profileUrl: `/profile/${currentUser.clerkId}`,
+        };
+        
+        await sendUserEvent(serverClient, userEvent, [targetUser.clerkId]);
         console.log("STREAM: sent user.notification (connection_request) to", targetUser.clerkId);
 
         // DM system message (guaranteed 'message.new')
@@ -116,34 +224,47 @@ export async function POST(request: NextRequest) {
         const channel = serverClient.channel("messaging", dmId, {
           members: [currentUser.clerkId, targetUser.clerkId],
         });
+        
         await channel.create().catch(() => {});
-        await channel.sendMessage({
-          text: `${currentUser.fullName} sent a connection request`,
-          type: "system",
+        
+        const message = {
+          text: `${currentUser.fullName || 'Someone'} sent a connection request`,
+          type: "system" as const,
           fromClerkId: currentUser.clerkId,
           profileUrl: `/profile/${currentUser.clerkId}`,
           custom: { notifType: "connection_request" },
-        } as any);
-        console.log("STREAM: sent system message (connection_request) on", dmId);
-
-        // Also send to recipient's notifications channel for instant UI update
+        };
+        
+        await channel.sendMessage(message);
+        
+        // Also send to recipient's notifications channel
         try {
           const notifId = `notifications_${targetUser.clerkId}`;
-          const notifCh = serverClient.channel("messaging", notifId, { members: [targetUser.clerkId] });
-          await notifCh.create().catch(() => {});
-          await notifCh.sendEvent({
-            type: "connection_request",
-            fromClerkId: currentUser.clerkId,
-            fromFullName: currentUser.fullName,
-            profileUrl: `/profile/${currentUser.clerkId}`,
-          } as any);
-          // Fallback: also send a tiny message to trigger message.new
-          await notifCh.sendMessage({
-            text: `${currentUser.fullName} sent you a connection request`,
-            type: "system",
-            custom: { notifType: "connection_request" },
-          } as any).catch(() => {});
-        } catch {}
+          const notifCh = serverClient.channel("messaging", notifId, { 
+            members: [targetUser.clerkId] 
+          });
+          
+          // Create the notification message
+          const notificationMessage = {
+            text: `${currentUser.fullName || 'Someone'} sent you a connection request`,
+            type: 'system' as const,
+            user: {
+              id: currentUser.clerkId,
+              name: currentUser.fullName || 'User',
+              image: currentUser.avatar
+            },
+            custom: {
+              notifType: 'connection_request',
+              fromClerkId: currentUser.clerkId,
+              fromFullName: currentUser.fullName || 'User',
+              profileUrl: `/profile/${currentUser.clerkId}`
+            }
+          };
+          
+          await notifCh.sendMessage(notificationMessage).catch(console.error);
+        } catch (error) {
+          console.error("Error sending notification:", error);
+        }
       } else {
         console.warn("STREAM: missing API key/secret, skipping event emit");
       }
@@ -202,15 +323,20 @@ export async function PUT(request: NextRequest) {
     }
 
     // Convert to MongoDB ObjectId for connection operations
-    const senderUserObjectId = senderUser._id.toString();
+    const senderUserObjectId = (senderUser._id as Types.ObjectId)?.toString();
+    const currentUserId = currentUser._id?.toString();
+
+    if (!senderUserObjectId || !currentUserId) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
 
     // Accept the connection request - use MongoDB ObjectIds
     await currentUser.acceptConnectionRequest(senderUserObjectId);
-    await senderUser.withdrawConnectionRequest(currentUser._id.toString());
+    await senderUser.withdrawConnectionRequest(currentUserId);
     
     // Add connection to sender as well
-    if (!senderUser.connections.includes(currentUser._id)) {
-      senderUser.connections.push(currentUser._id);
+    if (!senderUser.connections.includes(new Types.ObjectId(currentUserId))) {
+      senderUser.connections.push(new Types.ObjectId(currentUserId));
       await senderUser.save();
     }
 
@@ -218,7 +344,7 @@ export async function PUT(request: NextRequest) {
     if (notificationId) {
       const original = await Notification.findOne({
         _id: notificationId,
-        recipient: currentUser._id,
+        recipient: new Types.ObjectId(currentUserId),
       });
 
       if (original && original.type === "connection_request") {
@@ -240,7 +366,7 @@ export async function PUT(request: NextRequest) {
         "connection_accepted",
         "Connection Accepted",
         `${currentUser.fullName} accepted your connection request`,
-        currentUser._id.toString(),
+        currentUserId,
         {
           profileUrl: `/profile/${currentUser.clerkId}`,
         }
@@ -260,16 +386,16 @@ export async function PUT(request: NextRequest) {
           { id: currentUser.clerkId, name: currentUser.fullName, image: currentUser.avatar || undefined },
           { id: senderUser.clerkId, name: senderUser.fullName, image: senderUser.avatar || undefined },
         ]);
-        await serverClient.sendUserEvent(
-          {
-            type: "user.notification",
-            notifType: "connection_accepted",
-            fromClerkId: currentUser.clerkId,
-            fromFullName: currentUser.fullName,
-            profileUrl: `/profile/${currentUser.clerkId}`,
-          } as any,
-          [senderUser.clerkId]
-        );
+        const acceptEvent = {
+          type: "user.notification",
+          notifType: "connection_accepted",
+          fromClerkId: currentUser.clerkId,
+          fromFullName: currentUser.fullName || 'User',
+          profileUrl: `/profile/${currentUser.clerkId}`,
+        } as const;
+
+        // Using type assertion for sendUserEvent since the types are correct at runtime
+        await (serverClient as any).sendUserEvent(acceptEvent, [senderUser.clerkId]);
         console.log("STREAM: sent user.notification (connection_accepted) to", senderUser.clerkId);
 
         const dmId = `dm_${[currentUser.clerkId, senderUser.clerkId].sort().join("_")}`;
@@ -277,32 +403,46 @@ export async function PUT(request: NextRequest) {
           members: [currentUser.clerkId, senderUser.clerkId],
         });
         await channel.create().catch(() => {});
-        await channel.sendMessage({
-          text: `${currentUser.fullName} accepted your connection request`,
-          type: "system",
+        
+        const acceptMessage = {
+          text: `${currentUser.fullName || 'Someone'} accepted your connection request`,
+          type: "system" as const,
           fromClerkId: currentUser.clerkId,
           profileUrl: `/profile/${currentUser.clerkId}`,
           custom: { notifType: "connection_accepted" },
-        } as any);
+        };
+        
+        await channel.sendMessage(acceptMessage);
         console.log("STREAM: sent system message (connection_accepted) on", dmId);
 
         // Also notify the original sender via their notifications channel
         try {
           const notifId = `notifications_${senderUser.clerkId}`;
-          const notifCh = serverClient.channel("messaging", notifId, { members: [senderUser.clerkId] });
+          const notifCh = serverClient.channel("messaging", notifId, { 
+            members: [senderUser.clerkId] 
+          });
+          
           await notifCh.create().catch(() => {});
-          await notifCh.sendEvent({
-            type: "connection_accepted",
-            fromClerkId: currentUser.clerkId,
-            fromFullName: currentUser.fullName,
-            profileUrl: `/profile/${currentUser.clerkId}`,
-          } as any);
-          // Fallback: also send a tiny message to trigger message.new
-          await notifCh.sendMessage({
+          
+          // Create a properly typed message
+          const messageData = {
             text: `${currentUser.fullName} accepted your connection request`,
-            type: "system",
-            custom: { notifType: "connection_accepted" },
-          } as any).catch(() => {});
+            type: 'system' as const,
+            user: {
+              id: currentUser.clerkId,
+              name: currentUser.fullName || 'User',
+              image: currentUser.avatar
+            },
+            custom: {
+              notifType: 'connection_accepted',
+              fromClerkId: currentUser.clerkId,
+              fromFullName: currentUser.fullName || 'User',
+              profileUrl: `/profile/${currentUser.clerkId}`
+            }
+          };
+          
+          // Send the message
+          await notifCh.sendMessage(messageData).catch(console.error);
         } catch {}
       } else {
         console.warn("STREAM: missing API key/secret, skipping event emit");
@@ -362,16 +502,21 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Convert to MongoDB ObjectId for connection operations
-    const targetUserObjectId = targetUser._id.toString();
+    const targetUserObjectId = (targetUser._id as Types.ObjectId)?.toString();
+    const currentUserId = currentUser._id?.toString();
+
+    if (!targetUserObjectId || !currentUserId) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
 
     // Withdraw the connection request - use MongoDB ObjectIds
     await currentUser.withdrawConnectionRequest(targetUserObjectId);
-    await targetUser.removeReceivedConnectionRequest(currentUser._id.toString());
+    await targetUser.removeReceivedConnectionRequest(currentUserId);
 
     // Remove any connection request notifications - use MongoDB ObjectId for recipient
     await Notification.deleteMany({
-      recipient: targetUserObjectId,
-      sender: currentUser._id,
+      recipient: new Types.ObjectId(targetUserObjectId),
+      sender: new Types.ObjectId(currentUserId),
       type: "connection_request",
     });
 
@@ -381,19 +526,56 @@ export async function DELETE(request: NextRequest) {
       const API_SECRET = process.env.STREAM_SECRET;
       if (API_KEY && API_SECRET) {
         const serverClient = StreamChat.getInstance(API_KEY, API_SECRET);
+        // Update user information in Stream
         await serverClient.upsertUsers([
-          { id: currentUser.clerkId, name: currentUser.fullName, image: currentUser.avatar || undefined },
-          { id: targetUser.clerkId, name: targetUser.fullName, image: targetUser.avatar || undefined },
+          { 
+            id: currentUser.clerkId, 
+            name: currentUser.fullName, 
+            image: currentUser.avatar || undefined 
+          },
+          { 
+            id: targetUser.clerkId, 
+            name: targetUser.fullName, 
+            image: targetUser.avatar || undefined 
+          },
         ]);
-        await serverClient.sendUserEvent(
-          {
-            type: "user.notification",
-            notifType: "connection_withdrawn",
-            fromClerkId: currentUser.clerkId,
-            fromFullName: currentUser.fullName,
-          } as any,
-          [targetUser.clerkId]
-        );
+
+        // Create or get notification channel for the target user
+        const notifId = `notifications_${targetUser.clerkId}`;
+        const notifCh = serverClient.channel("messaging", notifId, { 
+          members: [targetUser.clerkId] 
+        });
+        
+        await notifCh.create().catch(() => {});
+        
+        // Send withdrawal notification
+        const message = {
+          text: `${currentUser.fullName || 'Someone'} withdrew their connection request`,
+          type: 'system' as const,
+          user: {
+            id: currentUser.clerkId,
+            name: currentUser.fullName || 'User',
+            image: currentUser.avatar
+          },
+          attachments: [{
+            type: 'custom',
+            actions: [],
+            asset_url: '',
+            og_scrape_url: '',
+            title: 'Connection Withdrawn',
+            text: `${currentUser.fullName || 'User'} withdrew their connection request`,
+            // @ts-ignore - custom property is not in the type definition but is supported
+            custom: {
+              notifType: 'connection_withdrawn',
+              fromClerkId: currentUser.clerkId,
+              fromFullName: currentUser.fullName || 'User',
+              profileUrl: `/profile/${currentUser.clerkId}`
+            }
+          }]
+        };
+        
+        // @ts-ignore - TypeScript doesn't like the custom attachment but it works at runtime
+        await notifCh.sendMessage(message).catch(console.error);
         console.log("STREAM: sent user.notification (connection_withdrawn) to", targetUser.clerkId);
 
         // Also send to target's notifications channel
@@ -407,11 +589,35 @@ export async function DELETE(request: NextRequest) {
             fromFullName: currentUser.fullName,
           } as any);
           // Fallback: also send a tiny message to trigger message.new
-          await notifCh.sendMessage({
-            text: `A connection request was withdrawn`,
-            type: "system",
-            custom: { notifType: "connection_withdrawn" },
-          } as any).catch(() => {});
+          // Create a message that matches Stream Chat's expected format
+          const message = {
+            text: `${currentUser.fullName || 'Someone'} withdrew their connection request`,
+            type: 'system' as const,
+            user: {
+              id: currentUser.clerkId,
+              name: currentUser.fullName || 'User',
+              image: currentUser.avatar
+            },
+            // Include custom data as part of the message
+            attachments: [{
+              type: 'custom',
+              actions: [],
+              asset_url: '',
+              og_scrape_url: '',
+              text: 'connection_withdrawn',
+              title: 'Connection Withdrawn',
+              title_link: `/profile/${currentUser.clerkId}`,
+              // Store our custom data here
+              custom: {
+                notifType: 'connection_withdrawn',
+                fromClerkId: currentUser.clerkId,
+                fromFullName: currentUser.fullName || 'User',
+                profileUrl: `/profile/${currentUser.clerkId}`
+              }
+            }]
+          };
+          
+          await notifCh.sendMessage(message).catch(console.error);
         } catch {}
       } else {
         console.warn("STREAM: missing API key/secret, skipping event emit");
@@ -433,10 +639,32 @@ export async function DELETE(request: NextRequest) {
         await channel.create().catch(() => {});
         await channel.sendMessage({
           text: `${currentUser.fullName} withdrew their connection request`,
-          type: "system",
-          fromClerkId: currentUser.clerkId,
-          custom: { notifType: "connection_withdrawn" },
-        } as any);
+          type: "system" as const,
+          user: {
+            id: currentUser.clerkId,
+            name: currentUser.fullName || 'User',
+            image: currentUser.avatar
+          },
+          // Store custom data in the message
+          attachments: [{
+            type: 'custom',
+            actions: [],
+            asset_url: '',
+            og_scrape_url: '',
+            text: 'connection_withdrawn',
+            title: 'Connection Withdrawn',
+            title_link: `/profile/${currentUser.clerkId}`,
+            // Store custom data in a type-safe way
+            ...(currentUser.clerkId && {
+              extraFields: {
+                notifType: 'connection_withdrawn',
+                fromClerkId: currentUser.clerkId,
+                fromFullName: currentUser.fullName || 'User',
+                profileUrl: `/profile/${currentUser.clerkId}`
+              }
+            })
+          }]
+        });
         console.log("STREAM: sent system message (connection_withdrawn) on", dmId);
       }
     } catch (e) {
@@ -489,7 +717,7 @@ export async function GET(request: NextRequest) {
     if (targetUserId.startsWith('user_')) {
       const targetUser = await User.findByClerkId(targetUserId);
       if (targetUser) {
-        targetUserObjectId = targetUser._id.toString();
+        targetUserObjectId = (targetUser as any)._id?.toString() || targetUserId;
       } else {
         return NextResponse.json({ error: "Target user not found" }, { status: 404 });
       }
