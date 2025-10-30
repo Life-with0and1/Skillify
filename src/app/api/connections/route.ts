@@ -43,7 +43,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert to MongoDB ObjectId for connection operations
-    const targetUserObjectId = targetUser._id.toString();
+    const targetUserObjectId = targetUser._id ? targetUser._id.toString() : null;
+    
+    if (!targetUserObjectId) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
 
     // Check if already connected or request already sent
     const connectionStatus = currentUser.getConnectionStatus(targetUserObjectId);
