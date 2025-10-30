@@ -78,6 +78,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert user into Stream (one-time per sign-in/signup, id = Clerk userId)
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: "User not found in database" },
+        { status: 404 }
+      );
+    }
+
     try {
       const API_KEY = process.env.STREAM_KEY;
       const API_SECRET = process.env.STREAM_SECRET;
