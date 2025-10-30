@@ -19,7 +19,6 @@ export async function getDb(): Promise<Db> {
       // client.db() with no args uses the db from the connection string if present
       const derived = client.db();
       // Some drivers still allow this even if no db in URI; ensure name falls back correctly
-      // @ts-expect-error internal property may exist; harmless if not
       const hasName = derived?.databaseName && typeof derived.databaseName === 'string';
       db = hasName ? derived : client.db(fallbackName);
     } catch {
