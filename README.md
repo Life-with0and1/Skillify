@@ -4,7 +4,6 @@
 
 A revolutionary peer-to-peer learning platform that connects skilled individuals for knowledge exchange without the hefty price tag of traditional courses.
 
-![Skillify Banner](./public/banner.png)
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_Skillify-blue?style=for-the-badge)](https://skillify-5gfp7lg0a-life-with0and1s-projects.vercel.app/)
 [![GitHub Stars](https://img.shields.io/github/stars/Life-with0and1/Skillify?style=for-the-badge&logo=github)](https://github.com/Life-with0and1/Skillify)
