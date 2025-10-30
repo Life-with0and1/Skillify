@@ -152,19 +152,6 @@ npm start
 
 ---
 
-## 📸 Screenshots
-
-### **Dashboard**
-![Dashboard](./public/screenshots/dashboard.png)
-
-### **User Discovery**
-![User Search](./public/screenshots/search.png)
-
-### **Video Calls**
-![Video Call](./public/screenshots/video-call.png)
-
----
-
 ## 🤝 Contributing
 
 We welcome contributions from developers of all skill levels! Here's how you can help:
