@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import dbConnect from "@/lib/mongodb";
-import User, { IUser } from "@/models/User";
+import User from "@/models/User";
+import { Types } from "mongoose";
 
 interface ConnectionUser {
   clerkId: string;
   fullName: string;
   avatar?: string;
-  _id: any; // MongoDB _id
+  _id: Types.ObjectId;
 }
 
 interface ConnectionResponse {
@@ -21,7 +22,7 @@ interface ConnectionResponse {
 // GET /api/connections/list - return connected users for the current user
 export async function GET(_req: NextRequest) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" }, 
@@ -31,25 +32,29 @@ export async function GET(_req: NextRequest) {
 
     await dbConnect();
 
-    const me = await User.findOne({ clerkId: userId }).select("connections").lean();
-    if (!me) {
+    const user = await User.findOne({ clerkId: userId })
+      .select("connections")
+      .lean();
+    
+    if (!user) {
       return NextResponse.json<ConnectionResponse>({ users: [] });
     }
 
-    // Ensure connections is an array of MongoDB ObjectIds
-    const connectionIds = Array.isArray(me.connections) 
-      ? me.connections
+    // Safely handle connections array
+    const connectionIds = Array.isArray(user.connections) 
+      ? user.connections
       : [];
 
     if (connectionIds.length === 0) {
       return NextResponse.json<ConnectionResponse>({ users: [] });
     }
 
-    const users = await User.find({ _id: { $in: connectionIds } })
-      .select<keyof ConnectionUser>("clerkId fullName avatar")
-      .lean<ConnectionUser[]>();
+    const users = await User.find(
+      { _id: { $in: connectionIds } },
+      { clerkId: 1, fullName: 1, avatar: 1 }
+    ).lean<ConnectionUser[]>();
 
-    const data = users.map((user: ConnectionUser) => ({
+    const data = users.map((user) => ({
       clerkId: user.clerkId,
       name: user.fullName || 'Unknown User',
       avatar: user.avatar || "/default-avatar.png",
