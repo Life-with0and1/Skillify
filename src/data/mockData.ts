@@ -3,6 +3,7 @@ import { User } from '../types';
 export const mockUsers: User[] = [
   {
     id: '1',
+    clerkId: 'clerk_alice_123',
     name: 'Alice Johnson',
     email: 'alice@example.com',
     avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=150',
@@ -34,6 +35,7 @@ export const mockUsers: User[] = [
   },
   {
     id: '2',
+    clerkId: 'clerk_michael_456',
     name: 'Michael Chen',
     email: 'michael@example.com',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
@@ -65,6 +67,7 @@ export const mockUsers: User[] = [
   },
   {
     id: '3',
+    clerkId: 'clerk_sarah_789',
     name: 'Sarah Williams',
     email: 'sarah@example.com',
     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
@@ -96,6 +99,7 @@ export const mockUsers: User[] = [
   },
   {
     id: '4',
+    clerkId: 'clerk_david_012',
     name: 'David Rodriguez',
     email: 'david@example.com',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
