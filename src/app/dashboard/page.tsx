@@ -19,7 +19,25 @@ const DashboardPage = () => {
   const [location, setLocation] = useState("");
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   // Database user for all display data
-  const [dbUser, setDbUser] = useState<any>(null);
+  interface User {
+  id: string;
+  skillsTeaching: Array<{ skill: string }>;
+  skillsLearning: Array<{ skill: string }>;
+  avatar?: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  location?: string;
+  joinedAt?: string | Date;
+  rating?: number;
+  totalReviews?: number;
+  [key: string]: any; // For any additional properties that might exist
+}
+
+// ... other code ...
+
+  const [dbUser, setDbUser] = useState<User | null>(null);
   const [skills, setSkills] = useState({
     teaching: [] as Array<{ skill: string }>,
     learning: [] as Array<{ skill: string }>,
@@ -248,13 +266,13 @@ const DashboardPage = () => {
 
         // Also update dbUser to reflect changes immediately
         setDbUser((prev) =>
-          prev
+          prev && response?.user
             ? {
                 ...prev,
                 skillsTeaching: response.user.skillsTeaching || [],
                 skillsLearning: response.user.skillsLearning || [],
               }
-            : null
+            : prev
         );
       } else if (response.error) {
         console.error("Error adding skill:", response.error);
