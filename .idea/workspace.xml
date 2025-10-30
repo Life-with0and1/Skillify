@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="55117602-ce8e-45b5-83a6-f1111b8a5546" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.next/app-build-manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/.next/app-build-manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/app-paths-manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/app-paths-manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/app/api/users/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/app/api/users/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/app/search/page.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/app/search/page.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/middleware-manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/middleware-manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/server-reference-manifest.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/server-reference-manifest.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/server-reference-manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/server-reference-manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/vendor-chunks/@clerk.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/vendor-chunks/@clerk.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/server/webpack-runtime.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/server/webpack-runtime.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/static/chunks/app/layout.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/static/chunks/app/layout.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/static/chunks/app/search/page.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/static/chunks/app/search/page.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/static/chunks/webpack.js" beforeDir="false" afterPath="$PROJECT_DIR$/.next/static/chunks/webpack.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/static/css/app/layout.css" beforeDir="false" afterPath="$PROJECT_DIR$/.next/static/css/app/layout.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.next/trace" beforeDir="false" afterPath="$PROJECT_DIR$/.next/trace" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/users/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/users/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/profile/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/profile/[id]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/search/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/search/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Navbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Navbar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/UserCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/UserCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/api.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "Life-with0and1"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Life-with0and1/Skillify.git",
+    "accountId": "9e2d3f8e-3790-4261-8ab1-3d1fd83cf634"
+  }
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 7
+}]]></component>
+  <component name="ProjectId" id="33NlCFpqqv4WxqZpRn7lR1VSeLH" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/ACER/OneDrive/Desktop/skillify-nextjs"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="55117602-ce8e-45b5-83a6-f1111b8a5546" name="Changes" comment="" />
+      <created>1759165281786</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1759165281786</updated>
+    </task>
+    <servers />
+  </component>
+</project>

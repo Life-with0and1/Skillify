@@ -1,0 +1,38 @@
+{
+  "name": "skillify-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.31.10",
+    "@stream-io/node-sdk": "^0.7.12",
+    "@stream-io/video-react-sdk": "^1.24.1",
+    "@types/mongoose": "^5.11.96",
+    "dotenv": "^17.2.2",
+    "lucide-react": "^0.548.0",
+    "mongodb": "^6.19.0",
+    "mongoose": "^8.18.1",
+    "next": "14.2.25",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
+    "stream-chat": "^9.19.1",
+    "svix": "^1.76.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "autoprefixer": "^10.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "14.2.25",
+    "postcss": "^8.0.0",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5.0.0"
+  }
+}

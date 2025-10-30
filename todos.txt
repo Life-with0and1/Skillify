@@ -1,0 +1,15 @@
+1️⃣ Message hightlight and notification on reload goes off
+
+2️⃣ Loading inplace of user id
+
+3️⃣ Remove all consoles
+
+4️⃣ Only left message pannel also show recent message
+
+5️⃣ Send clerk id using cookies
+
+6️⃣ Show call accept/decline model overall web pages
+
+7️⃣ notification in real time not coming 
+
+8️⃣ View post in notification button
