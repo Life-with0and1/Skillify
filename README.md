@@ -177,13 +177,6 @@ We welcome contributions from developers of all skill levels! Here's how you can
 - Add comments for complex logic
 - Test your changes thoroughly
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
 
 ## 🌟 Support the Project
 
