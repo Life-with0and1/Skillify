@@ -21,22 +21,21 @@ export async function GET(request: NextRequest) {
     const skip = parseInt(searchParams.get("skip") || "0");
 
     // Find user by Clerk ID
-    const user = await User.findByClerkId(userId);
+    const user = await User.findByClerkId(userId) as IUser | null;
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get notifications
     const notifications = await Notification.getUserNotifications(
-      (user._id as Types.ObjectId).toString(),
+      user._id.toString(),
       filter,
       limit,
       skip
     );
 
     // Get unread count
-    const unreadCount = await Notification.getUnreadCount((user._id as Types.ObjectId).toString()
-);
+    const unreadCount = await Notification.getUnreadCount(user._id.toString());
 
     return NextResponse.json({
       notifications,
@@ -62,43 +61,40 @@ export async function PUT(request: NextRequest) {
 
     await dbConnect();
 
-    const { notificationId, markAllAsRead } = await request.json();
+    const { notificationId } = await request.json();
+    if (!notificationId) {
+      return NextResponse.json(
+        { error: "Notification ID is required" },
+        { status: 400 }
+      );
+    }
 
     // Find user by Clerk ID
-    const user = await User.findByClerkId(userId);
+    const user = await User.findByClerkId(userId) as IUser | null;
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (markAllAsRead) {
-      // Mark all notifications as read
-      await Notification.markAllAsRead((user._id as Types.ObjectId).toString()
-);
-      return NextResponse.json({ message: "All notifications marked as read" });
-    } else if (notificationId) {
-      // Mark specific notification as read
-      const notification = await Notification.findOne({
+    // Mark notification as read
+    const notification = await Notification.findOneAndUpdate(
+      {
         _id: notificationId,
         recipient: user._id,
-      });
+      },
+      { isRead: true, readAt: new Date() },
+      { new: true }
+    );
 
-      if (!notification) {
-        return NextResponse.json(
-          { error: "Notification not found" },
-          { status: 404 }
-        );
-      }
-
-      await notification.markAsRead();
-      return NextResponse.json({ message: "Notification marked as read" });
-    } else {
+    if (!notification) {
       return NextResponse.json(
-        { error: "Notification ID or markAllAsRead flag is required" },
-        { status: 400 }
+        { error: "Notification not found" },
+        { status: 404 }
       );
     }
+
+    return NextResponse.json(notification);
   } catch (error) {
-    console.error("Error marking notification as read:", error);
+    console.error("Error updating notification:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -116,7 +112,8 @@ export async function DELETE(request: NextRequest) {
 
     await dbConnect();
 
-    const { notificationId } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const notificationId = searchParams.get("id");
 
     if (!notificationId) {
       return NextResponse.json(
@@ -126,25 +123,28 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Find user by Clerk ID
-    const user = await User.findByClerkId(userId);
+    const user = await User.findByClerkId(userId) as IUser | null;
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Delete notification
-    const result = await Notification.findOneAndDelete({
+    const result = await Notification.deleteOne({
       _id: notificationId,
-      recipient: user._id,
+      $or: [
+        { recipient: user._id },
+        { 'sender._id': user._id }
+      ]
     });
 
-    if (!result) {
+    if (result.deletedCount === 0) {
       return NextResponse.json(
-        { error: "Notification not found" },
+        { error: "Notification not found or access denied" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ message: "Notification deleted successfully" });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting notification:", error);
     return NextResponse.json(

@@ -14,6 +14,9 @@ export interface INotification extends Document {
   read: boolean;
   createdAt: Date;
   updatedAt: Date;
+  
+  // Document instance methods
+  markAsRead(): Promise<INotification>;
 }
 
 export interface INotificationModel extends Model<INotification> {
@@ -32,7 +35,8 @@ export interface INotificationModel extends Model<INotification> {
     skip?: number
   ): Promise<INotification[]>;
   getUnreadCount(userId: string): Promise<number>;
-  markAllAsRead(userId: string): Promise<any>;
+  markAllAsRead(userId: string): Promise<{ modifiedCount: number }>;
+  markAsRead(): Promise<INotification>;
 }
 
 const notificationSchema = new Schema<INotification, INotificationModel>(
